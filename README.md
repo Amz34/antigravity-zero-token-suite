@@ -51,7 +51,7 @@ flowchart TD
 
 ### 1. Clone & Set Up
 ```bash
-git clone https://github.com/YOUR_USERNAME/antigravity-zero-token-suite.git
+git clone https://github.com/Amz34/antigravity-zero-token-suite.git
 cd antigravity-zero-token-suite
 chmod +x scripts/*.sh
 ```
