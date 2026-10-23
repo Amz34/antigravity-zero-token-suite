@@ -1,107 +1,79 @@
-# Antigravity Zero Token Suite: Production Edge Agent Architecture
+# Antigravity Zero-Token Suite
 
-A high-performance algorithmic framework to slash LLM token consumption by 85%+ while running deterministic autonomous agent workflows across Google Antigravity, Gemini, and local compute nodes.
+[![CI](https://github.com/Amz34/antigravity-zero-token-suite/actions/workflows/ci.yml/badge.svg)](https://github.com/Amz34/antigravity-zero-token-suite/actions/workflows/ci.yml)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Engine: Antigravity](https://img.shields.io/badge/Engine-Antigravity%202.0-blueviolet.svg)](#)
-[![Model: Gemini Flash/Pro](https://img.shields.io/badge/Gemini-3.8%20Flash%20%7C%20Pro-blue.svg)](#)
-[![Optimization: 85% Saved](https://img.shields.io/badge/Optimization-85%25%20Token%20Saved-brightgreen.svg)](#)
+Local-first workspace scanner and context-budget guardrail that flags oversized source files before an autonomous coding agent ingests them into its prompt window.
 
----
+![Antigravity Zero-Token Suite overview](assets/github-benefits-growth.jpg)
 
-## 1. What This Solves (For Humans and Beginners)
+## Why It Exists
 
-When you ask an AI model to read a huge file, debug a script, or watch your system, it eats thousands of expensive tokens every single second. Most of those tokens are wasted reading empty lines, duplicate logs, and irrelevant code.
+Unbounded file reads are one of the fastest ways for autonomous coding loops to exhaust API token quotas. When an agent reads an entire log, lockfile, or monolithic module in a single turn, every subsequent step in that conversation pays the context overhead.
 
-Think of it like hiring a world-class consultant:
-* The wrong way: Handing them 500 pages of raw server logs and paying $100 per page for them to skim it.
-* The Antigravity way: Running a 1-second free script on your laptop to find the 2 broken lines, and only paying the consultant to fix those 2 lines.
+`antigravity-zero-token-suite` pairs a dependency-free Python CLI scanner (`scripts/token_guard.py`) with a declarative policy (`config/antigravity_rules.md`) so local scripts pre-screen the repository at zero API cost and tell the agent which files require targeted line-range reads.
 
-This repository gives you that exact filtering machine.
+## Features
 
----
+- **Zero External Dependencies:** Built purely on the Python 3 standard library (`argparse`, `json`, `os`, `pathlib`).
+- **Heuristic Token Budgeting:** Computes per-file and workspace-wide line, character, and estimated token counts (`chars // 4` by default).
+- **Oversized File Detection:** Flags any source or documentation file exceeding the configurable `--max-lines` threshold (default `150` lines).
+- **CI Gate Mode (`--strict`):** Returns exit code `1` when oversized files are detected, or emits structured JSON (`--json`) for downstream agent consumption.
+- **Automatic Directory Pruning:** Skips `.git`, `node_modules`, `__pycache__`, `.venv`, `dist`, and `build` trees automatically.
 
-## 2. Technical Blueprint (For Data Scientists and ML Engineers)
+## Quickstart
 
-Large language models are autoregressive token predictors with $O(N^2)$ attention complexity over context length $N$. Dumping raw telemetry, large ASTs, or full files into context windows causes catastrophic attention degradation, semantic dilution, and unnecessary API burn.
+Clone the repository and run the scanner against any project directory:
 
-This architecture enforces strict separation of concerns:
-* **L1 Pre-Compute Tier (Deterministic Linux Runtime):** POSIX pipes, regex parsing, and stream filters executed directly on local CPU. Cost: $0.00.
-* **L2 Compression and Semantic Distillation:** Byte-pair and token heuristic truncation (`token_guard.py`) generating minimal context envelopes.
-* **L3 Inference and Decision Tier (Gemini 3.8 Flash):** High-level reasoning triggered solely on distilled semantic vectors and actionable diffs.
-* **L4 Subagent Isolation:** Workspaces forked asynchronously without polluting the parent conversation graph.
-
-```mermaid
-flowchart TD
-    A["Raw Ingestion Tier: Logs, AST, Code (100k+ Tokens)"] --> B["Deterministic L1 Engine: Shell, Grep, AST Slice ($0)"]
-    B --> C["L2 Semantic Token Guard: Context Pruning"]
-    C -->|Micro-Envelope < 400 Tokens| D["L3 Google Antigravity: Gemini Flash Engine"]
-    D --> E["Autonomous Action Dispatcher"]
-    E -->|Deterministic Patch| F["Local System Execution: $0 Burn"]
-    E -->|Isolated Worker| G["Subagent Swarm: Isolated Memory"]
-```
-
----
-
-## 3. Benchmark Metrics
-
-| Workload Dimension | Standard Agent Pattern | Antigravity Zero-Token Engine | Delta Improvement |
-| :--- | :--- | :--- | :--- |
-| **AST Refactor Context** | 85,000 tokens | 1,200 tokens (Line targeted) | **98.5% reduction** |
-| **Telemetry Ingestion** | 250,000 tokens | 0 tokens (Local AWK stream filter) | **100% free compute** |
-| **Git Unified Diff QA** | 42,000 tokens | 2,100 tokens (Syntactic micro diff) | **95.0% reduction** |
-| **Continuous Health QA** | $18.50 per day API burn | $0.00 per day (POSIX daemon) | **100% cost elimination** |
-
----
-
-## 4. Repository Structure
-
-```
-.
-├── config/
-│   └── antigravity_rules.md    # Production guardrails stopping full-file reads
-├── scripts/
-│   └── token_guard.py          # Dynamic payload compressor and token estimator
-├── examples/
-│   └── zero_token_audit.py     # Deterministic evaluation and token audit suite
-└── README.md
-```
-
----
-
-## 5. Quickstart
-
-### Step 1: Clone Repository
 ```bash
 git clone https://github.com/Amz34/antigravity-zero-token-suite.git
 cd antigravity-zero-token-suite
+
+# Human-readable workspace report
+python3 scripts/token_guard.py .
+
+# Machine-readable JSON output with a custom 120-line threshold
+python3 scripts/token_guard.py . --max-lines 120 --json
 ```
 
-### Step 2: Run Token Guard
-Compress any raw file down to a compact envelope before sending to an LLM:
+Example output:
+
+```text
+=== Antigravity Zero-Token Workspace Scanner ===
+Scanned Root:              /workspace/project
+Total Eligible Files:      4
+Total Lines of Code/Text:  224
+Estimated Full-Read Cost:  ~1890 tokens
+
+[ALERT] Files exceeding 150 lines (use targeted line ranges instead of full reads):
+  - scripts/token_guard.py: 152 lines (~1210 tokens)
+```
+
+## Context-Guard Policy (`config/antigravity_rules.md`)
+
+| Rule | Operational Constraint |
+|---|---|
+| Targeted Reads Only | Avoid reading files larger than 150 lines in one turn; use line offsets or `grep`/`sed`. |
+| Local Offload First | Execute parsing, regex filtering, and JSON aggregation in local Python/shell scripts before calling an LLM. |
+| Subagent Economy | Pass concise, self-contained task payloads to child workers rather than full conversation histories. |
+| Explicit Routing | Restrict MCP and model calls to approved endpoints configured for the workspace. |
+
+## Running Tests
+
 ```bash
-python3 scripts/token_guard.py --text "$(cat raw_input.log)" --max-tokens 400
+python3 -m unittest discover -s tests -v
 ```
 
-### Step 3: Deploy Guardrail Configuration
-Link the token guard rules to your workspace:
-```bash
-cp config/antigravity_rules.md ~/.gemini/antigravity-cli/rules.md
-```
+## Limitations
 
----
-
-## 6. Verification and Audit
-
-* **Routing Isolation:** Strict segregation guarantees zero secondary key usage or unintended token billing.
-* **Bounded Context:** Automatic context compaction triggered before semantic saturation.
-* **Deterministic Guard:** Local actions verified via isolated non-destructive execution paths.
-
----
+- Token counts use a deterministic character-division heuristic (`chars // 4`) rather than a model-specific BPE tokenizer so the scanner runs with zero third-party packages.
+- Binary files and extensions outside the default source/documentation set are skipped.
 
 ## License
-MIT
 
+Released under the [MIT License](LICENSE).
+
+<!-- agent-infra-backlink -->
 ---
 
-Part of [my always-on agent stack](https://github.com/Amz34) · [Awesome Agent Infrastructure](https://github.com/Amz34/awesome-agent-infrastructure) (135 live-checked building blocks).
+<sub>Part of the **[Awesome Agent Infrastructure](https://Amz34.github.io/awesome-agent-infrastructure/)** collection — 135 live-verified agent tools across 9 categories ([repo](https://github.com/Amz34/awesome-agent-infrastructure) · [profile](https://github.com/Amz34)).</sub>
+<!-- /agent-infra-backlink -->

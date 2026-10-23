@@ -7,7 +7,7 @@ To prevent accidental token exhaustion and maximize free local execution:
    - Use `StartLine` and `EndLine` parameters or shell `grep` / `sed`.
 
 2. **Offload Heavy Computation to Local Bash:**
-   - Data crunching, JSON parsing, regex replacements MUST be handled via local shell/python scripts ($0.00 cost).
+   - Data crunching, JSON parsing, and regex replacements MUST be handled via local shell/python scripts (zero API token cost).
    - Only return the distilled summary or targeted error to the LLM agent.
 
 3. **Subagent Economy:**
